@@ -1,0 +1,129 @@
+---
+title: Reference
+description: Detailed API reference for payload-auth options
+---
+
+# API Reference
+
+The `betterAuthPlugin` accepts a `PayloadAuthOptions` object to configure the behavior of the integration.
+
+```typescript
+import { betterAuthPlugin } from 'payload-auth'
+
+export default buildConfig({
+  plugins: [
+    betterAuthPlugin({
+      // options
+    }),
+  ],
+})
+```
+
+## PayloadAuthOptions
+
+The root configuration object for the plugin.
+
+| Option | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `betterAuthOptions` | `BetterAuthOptions` | - | **Required.** Configuration passed directly to Better Auth. See [Better Auth Docs](https://better-auth.com/docs/concepts/options). |
+| `disabled` | `boolean` | `false` | If `true`, the plugin is completely disabled. |
+| `disableDefaultPayloadAuth` | `boolean` | `false` | If `true`, disables Payload's native local strategy and auth handling. Better Auth becomes the sole provider for both admin and frontend. |
+| `collectionAdminGroup` | `string` | `"Auth"` | The group name to use for the generated collections in the Admin UI. |
+| `hidePluginCollections` | `boolean` | `false` | If `true`, hides all plugin-generated collections (except Users) from the Admin UI. |
+| `requireAdminInviteForSignUp` | `boolean` | `false` | If `true`, strictly requires a valid invite token for **any** sign-up (email or social). Useful for internal tools. |
+| `users` | `UserConfig` | `{}` | Configuration for the Users collection (see below). |
+| `admin` | `AdminConfig` | `{}` | Admin-specific settings (see below). |
+| `debug` | `DebugConfig` | `{}` | Debugging options (see below). |
+| `accounts` | `CollectionConfig` | - | Override options for the `accounts` collection. |
+| `sessions` | `CollectionConfig` | - | Override options for the `sessions` collection. |
+| `verifications` | `CollectionConfig` | - | Override options for the `verifications` collection. |
+| `adminInvitations` | `CollectionConfig` | - | Override options for the `adminInvitations` collection. |
+
+### Users Configuration (`users`)
+
+Configures the main Users collection.
+
+| Option | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `slug` | `string` | `"users"` | The slug to use for the users collection. **Must match your Better Auth `user` table model name if changed.** |
+| `defaultRole` | `string` | `"user"` | The role assigned to new users by default. |
+| `defaultAdminRole` | `string` | `"admin"` | The role assigned to the first created admin. |
+| `roles` | `string[]` | `["user"]` | A list of all available roles. |
+| `adminRoles` | `string[]` | `["admin"]` | A list of roles that grant access to the Payload Admin UI. |
+| `allowedFields` | `string[]` | `["name"]` | Fields that users are allowed to update on their own profile via the API. |
+| `hidden` | `boolean` | - | If `true`, hides the Users collection from the Admin UI. |
+| `blockFirstBetterAuthVerificationEmail` | `boolean` | `false` | If `true`, suppresses the initial verification email from Better Auth (useful if using Payload's verification logic). |
+| `collectionOverrides` | `Function` | - | A callback to fully override the Users collection config before it's finalized. |
+
+### Admin Configuration (`admin`)
+
+Settings that apply when using Better Auth to control Payload Admin access, specifically when `disableDefaultPayloadAuth` is `true`.
+
+| Option | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `loginMethods` | `LoginMethod[]` | - | An array of login methods to display on the custom Admin login page (e.g., `['github', 'google', 'emailPassword']`). |
+
+### Debug Configuration (`debug`)
+
+| Option | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `enableDebugLogs` | `boolean` | `false` | Enables verbose logging from the Better Auth core. |
+| `logTables` | `boolean` | `false` | Logs the generated database table schemas on initialization. |
+
+## Collection Maps
+
+The plugin automatically generates the following collections based on your configuration. You should avoid creating collections with these slugs manually unless you intend to override them via the plugin options.
+
+- `users` (Configurable via `users.slug`)
+- `sessions`
+- `accounts`
+- `verifications`
+- `admin-invitations`
+
+## Plugin Collection Overrides
+
+For advanced use cases, you can override the configuration of any internal collection:
+
+```typescript
+betterAuthPlugin({
+  // ...
+  users: {
+    collectionOverrides: ({ collection }) => {
+      return {
+        ...collection,
+        hooks: {
+          ...collection.hooks,
+          afterChange: [
+            ...(collection.hooks?.afterChange || []),
+            myCustomHook,
+          ],
+        },
+      }
+    },
+  },
+})
+```
+
+## Default Injected Fields
+
+The plugin automatically injects the following fields into the `users` collection. **Do not manually add these fields to your Payload config**, as this will cause duplication errors (e.g., "Duplicate field 'banned'").
+
+| Field Name | Description |
+| :--- | :--- |
+| `role` | User role(s) (e.g., `user`, `admin`). |
+| `email` | User's email address. |
+| `emailVerified` | Boolean indicating if email is verified. |
+| `name` | User's display name. |
+| `image` | User's profile image URL. |
+| `twoFactorEnabled` | Boolean indicating if 2FA is active. |
+| `username` | User's username (if enabled). |
+| `displayUsername` | Display version of the username. |
+| `isAnonymous` | Boolean for anonymous users. |
+| `phoneNumber` | User's phone number. |
+| `phoneNumberVerified` | Boolean indicating if phone is verified. |
+| `banned` | Boolean indicating if user is banned. |
+| `banReason` | Reason for the ban. |
+| `banExpires` | Expiration date of the ban. |
+| `normalizedEmail` | Read-only normalized email. |
+| `stripeCustomerId` | Associated Stripe Customer ID. |
+

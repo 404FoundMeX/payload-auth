@@ -5,14 +5,11 @@ import { usePathname } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
 import { AsideLink } from "@/components/ui/aside-link";
-import { docLinks, exampleLinks } from "@/config";
+import { docLinks } from "@/config";
 import { ChevronDownIcon } from "lucide-react";
 import { SidebarSearch } from "./sidebar-search";
-import { SidebarTabs } from "./sidebar-tabs";
 import { NewBadge } from "./new-badge";
-
 export default function Sidebar() {
-  const [group, setGroup] = useState("docs");
   const [currentOpen, setCurrentOpen] = useState<number>(0);
 
   const pathname = usePathname();
@@ -25,12 +22,10 @@ export default function Sidebar() {
   }, [pathname]);
 
   useEffect(() => {
-    const grp = pathname.includes("docs/examples") ? "examples" : "docs";
-    setGroup(grp);
     setCurrentOpen(getDefaultValue());
   }, [pathname, getDefaultValue]);
 
-  const cts = group === "docs" ? docLinks : exampleLinks;
+  const cts = docLinks;
 
   return (
     <div className={cn("fixed top-0")}>
@@ -41,7 +36,6 @@ export default function Sidebar() {
         )}
       >
         <div>
-          <SidebarTabs group={group} setGroup={setGroup} />
           <SidebarSearch />
           <MotionConfig
             transition={{ duration: 0.4, type: "spring", bounce: 0 }}

@@ -1,0 +1,107 @@
+---
+title: Usage
+description: How to use payload-auth in your application
+---
+
+# Usage Application
+
+The `payload-auth` plugin seamlessly integrates Better Auth with Payload CMS, managing the database schema, user sessions, and admin access control.
+
+## Architecture
+
+When you add `betterAuthPlugin` to your Payload config, it performs several key actions:
+
+1.  **Schema Generation**: It inspects your `betterAuthOptions` and generates the necessary database tables (using the "Better Auth" schema format) but mapped to Payload Collections.
+2.  **Collection Injection**: It automatically injects the following collections into your Payload config:
+    - `users` (or your custom slug)
+    - `sessions`
+    - `accounts`
+    - `verifications`
+    - `admin-invitations`
+3.  **Endpoint Injection**: It adds standard Better Auth API endpoints to your Payload application (e.g., `/api/auth/*`).
+4.  **Admin UI**: It customizes the Payload Admin UI to use Better Auth for sign-in and account management, replacing the default Payload auth views if `disableDefaultPayloadAuth` is enabled.
+
+## Reserved Names
+
+To prevent conflicts, avoid creating collections with the following slugs unless you are explicitly overriding the plugin's internal collections:
+
+- `users`
+- `accounts`
+- `sessions`
+- `verifications`
+- `admin-invitations`
+
+## Accessing Auth in Code
+
+### Server-Side (Payload / Next.js)
+
+You can access the full Better Auth instance directly from the Payload object. This is useful for hooks, custom endpoints, or server components.
+
+```typescript
+import { getPayload } from 'payload'
+import config from '@payload-config'
+
+const payload = await getPayload({ config })
+
+// Access the initialized Better Auth instance
+const auth = payload.betterAuth
+
+// Example: Get usage session
+const session = await auth.api.getSession({
+    headers: req.headers
+})
+```
+
+### Client-Side
+
+For client-side interactions (like signing in from a custom React component), use the Better Auth client.
+
+```typescript
+import { createAuthClient } from "better-auth/client"
+
+const authClient = createAuthClient({
+    baseURL: process.env.NEXT_PUBLIC_URL || "http://localhost:3000"
+})
+
+async function signIn() {
+    await authClient.signIn.social({
+        provider: "github"
+    })
+}
+```
+
+## Best Practices
+
+### 1. Environment Variables
+Always ensure `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL` are set in your environment variables. The plugin relies on these for security and redirection.
+
+```env
+BETTER_AUTH_SECRET=your-secure-random-string
+BETTER_AUTH_URL=http://localhost:3000
+```
+
+### 2. Custom User Fields
+If you need to add custom fields to your users (e.g., `bio`, `preferences`), you can do so by defining a `users` collection in your Payload config. The plugin will merge its required fields (email, password, etc.) with your custom fields.
+
+**However**, you must ensure your collection slug matches the plugin's `users.slug` option (default: `users`).
+
+### 3. Disabling Default Auth
+For the most integrated experience, we recommend setting `disableDefaultPayloadAuth: true`. This lets Better Auth handle everything, including the Admin Panel login, ensuring a single session source of truth.
+
+```typescript
+betterAuthPlugin({
+    betterAuthOptions: { /* ... */ },
+    disableDefaultPayloadAuth: true, // Recommended
+})
+```
+
+## Troubleshooting
+
+### "Collection with slug 'users' already exists"
+You likely have a `users` collection defined in your `payload.config.ts` AND the plugin is trying to create one.
+**Solution**: Remove the manual `users` collection OR configure the plugin to use a different slug (e.g., `users: { slug: 'auth-users' }`).
+
+### "Better Auth Secret not found"
+Ensure `BETTER_AUTH_SECRET` is defined in your `.env` file and that Payload is loading environment variables correctly.
+
+

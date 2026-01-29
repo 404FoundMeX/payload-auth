@@ -13,6 +13,7 @@ export interface DocLink {
     icon: ((props?: SVGProps<any>) => ReactNode) | LucideIcon;
     group?: boolean;
     isNew?: boolean;
+    external?: boolean;
   }[];
 }
 

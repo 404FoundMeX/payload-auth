@@ -63,7 +63,7 @@
     "dist"
   ],
   "scripts": {
-    "clean": "rm -rf ./dist && rm -rf ./tsconfig.tsbuildinfo",
+    "clean": "node -e \"require('fs').rmSync('./dist', {recursive:true, force:true}); require('fs').rmSync('./tsconfig.tsbuildinfo', {recursive:true, force:true})\"",
     "build": "pnpm clean && pnpm copyfiles && pnpm build:types && pnpm build:swc",
     "dev": "pnpm build && pnpm dev:watch",
     "dev:watch": "swc ./src -d ./dist --config-file .swcrc --strip-leading-paths --watch",
@@ -71,14 +71,14 @@
     "build:swc": "swc ./src -d ./dist --config-file .swcrc --strip-leading-paths",
     "build:types": "pnpm generate:better-auth-types && tsc --project tsconfig.json",
     "test": "vitest",
-    "generate:better-auth-types": "rm -rf src/better-auth/generated-types.ts && tsx src/better-auth/scripts/generate-types.ts"
+    "generate:better-auth-types": "node -e \"require('fs').rmSync('src/better-auth/generated-types.ts', {recursive:true, force:true})\" && tsx src/better-auth/scripts/generate-types.ts"
   },
   "peerDependencies": {
     "@better-auth/passkey": ">=1.4.0 <2",
     "@payloadcms/next": ">=3.69.0 <4",
     "@payloadcms/ui": ">=3.69.0 <4",
     "better-auth": ">=1.4.0 <2",
-    "next": ">=15.4.8 <16",
+    "next": ">=15.4.8 <17",
     "payload": ">=3.69.0 <4",
     "react": ">=19.2.1 <20",
     "react-dom": ">=19.2.1 <20"

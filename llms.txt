@@ -1,0 +1,322 @@
+file: ./content/docs/api.mdx
+meta: {
+  "title": "Reference",
+  "description": "Detailed API reference for payload-auth options"
+}
+        
+# API Reference
+
+The `betterAuthPlugin` accepts a `PayloadAuthOptions` object to configure the behavior of the integration.
+
+```typescript
+import { betterAuthPlugin } from 'payload-auth'
+
+export default buildConfig({
+  plugins: [
+    betterAuthPlugin({
+      // options
+    }),
+  ],
+})
+```
+
+## PayloadAuthOptions
+
+The root configuration object for the plugin.
+
+| Option                        | Type                | Default  | Description                                                                                                                               |
+| :---------------------------- | :------------------ | :------- | :---------------------------------------------------------------------------------------------------------------------------------------- |
+| `betterAuthOptions`           | `BetterAuthOptions` | -        | **Required.** Configuration passed directly to Better Auth. See [Better Auth Docs](https://better-auth.com/docs/concepts/options).        |
+| `disabled`                    | `boolean`           | `false`  | If `true`, the plugin is completely disabled.                                                                                             |
+| `disableDefaultPayloadAuth`   | `boolean`           | `false`  | If `true`, disables Payload's native local strategy and auth handling. Better Auth becomes the sole provider for both admin and frontend. |
+| `collectionAdminGroup`        | `string`            | `"Auth"` | The group name to use for the generated collections in the Admin UI.                                                                      |
+| `hidePluginCollections`       | `boolean`           | `false`  | If `true`, hides all plugin-generated collections (except Users) from the Admin UI.                                                       |
+| `requireAdminInviteForSignUp` | `boolean`           | `false`  | If `true`, strictly requires a valid invite token for **any** sign-up (email or social). Useful for internal tools.                       |
+| `users`                       | `UserConfig`        | `{}`     | Configuration for the Users collection (see below).                                                                                       |
+| `admin`                       | `AdminConfig`       | `{}`     | Admin-specific settings (see below).                                                                                                      |
+| `debug`                       | `DebugConfig`       | `{}`     | Debugging options (see below).                                                                                                            |
+| `accounts`                    | `CollectionConfig`  | -        | Override options for the `accounts` collection.                                                                                           |
+| `sessions`                    | `CollectionConfig`  | -        | Override options for the `sessions` collection.                                                                                           |
+| `verifications`               | `CollectionConfig`  | -        | Override options for the `verifications` collection.                                                                                      |
+| `adminInvitations`            | `CollectionConfig`  | -        | Override options for the `adminInvitations` collection.                                                                                   |
+
+### Users Configuration (`users`)
+
+Configures the main Users collection.
+
+| Option                                  | Type       | Default     | Description                                                                                                           |
+| :-------------------------------------- | :--------- | :---------- | :-------------------------------------------------------------------------------------------------------------------- |
+| `slug`                                  | `string`   | `"users"`   | The slug to use for the users collection. **Must match your Better Auth `user` table model name if changed.**         |
+| `defaultRole`                           | `string`   | `"user"`    | The role assigned to new users by default.                                                                            |
+| `defaultAdminRole`                      | `string`   | `"admin"`   | The role assigned to the first created admin.                                                                         |
+| `roles`                                 | `string[]` | `["user"]`  | A list of all available roles.                                                                                        |
+| `adminRoles`                            | `string[]` | `["admin"]` | A list of roles that grant access to the Payload Admin UI.                                                            |
+| `allowedFields`                         | `string[]` | `["name"]`  | Fields that users are allowed to update on their own profile via the API.                                             |
+| `hidden`                                | `boolean`  | -           | If `true`, hides the Users collection from the Admin UI.                                                              |
+| `blockFirstBetterAuthVerificationEmail` | `boolean`  | `false`     | If `true`, suppresses the initial verification email from Better Auth (useful if using Payload's verification logic). |
+| `collectionOverrides`                   | `Function` | -           | A callback to fully override the Users collection config before it's finalized.                                       |
+
+### Admin Configuration (`admin`)
+
+Settings that apply when using Better Auth to control Payload Admin access, specifically when `disableDefaultPayloadAuth` is `true`.
+
+| Option         | Type            | Default | Description                                                                                                          |
+| :------------- | :-------------- | :------ | :------------------------------------------------------------------------------------------------------------------- |
+| `loginMethods` | `LoginMethod[]` | -       | An array of login methods to display on the custom Admin login page (e.g., `['github', 'google', 'emailPassword']`). |
+
+### Debug Configuration (`debug`)
+
+| Option            | Type      | Default | Description                                                  |
+| :---------------- | :-------- | :------ | :----------------------------------------------------------- |
+| `enableDebugLogs` | `boolean` | `false` | Enables verbose logging from the Better Auth core.           |
+| `logTables`       | `boolean` | `false` | Logs the generated database table schemas on initialization. |
+
+## Collection Maps
+
+The plugin automatically generates the following collections based on your configuration. You should avoid creating collections with these slugs manually unless you intend to override them via the plugin options.
+
+* `users` (Configurable via `users.slug`)
+* `sessions`
+* `accounts`
+* `verifications`
+* `admin-invitations`
+
+## Plugin Collection Overrides
+
+For advanced use cases, you can override the configuration of any internal collection:
+
+```typescript
+betterAuthPlugin({
+  // ...
+  users: {
+    collectionOverrides: ({ collection }) => {
+      return {
+        ...collection,
+        hooks: {
+          ...collection.hooks,
+          afterChange: [
+            ...(collection.hooks?.afterChange || []),
+            myCustomHook,
+          ],
+        },
+      }
+    },
+  },
+})
+```
+
+## Default Injected Fields
+
+The plugin automatically injects the following fields into the `users` collection. **Do not manually add these fields to your Payload config**, as this will cause duplication errors (e.g., "Duplicate field 'banned'").
+
+| Field Name            | Description                              |
+| :-------------------- | :--------------------------------------- |
+| `role`                | User role(s) (e.g., `user`, `admin`).    |
+| `email`               | User's email address.                    |
+| `emailVerified`       | Boolean indicating if email is verified. |
+| `name`                | User's display name.                     |
+| `image`               | User's profile image URL.                |
+| `twoFactorEnabled`    | Boolean indicating if 2FA is active.     |
+| `username`            | User's username (if enabled).            |
+| `displayUsername`     | Display version of the username.         |
+| `isAnonymous`         | Boolean for anonymous users.             |
+| `phoneNumber`         | User's phone number.                     |
+| `phoneNumberVerified` | Boolean indicating if phone is verified. |
+| `banned`              | Boolean indicating if user is banned.    |
+| `banReason`           | Reason for the ban.                      |
+| `banExpires`          | Expiration date of the ban.              |
+| `normalizedEmail`     | Read-only normalized email.              |
+| `stripeCustomerId`    | Associated Stripe Customer ID.           |
+
+
+file: ./content/docs/installation.mdx
+meta: {
+  "title": "Installation",
+  "description": "How to install and configure payload-auth"
+}
+        
+# Installation
+
+## Prerequisites
+
+* Payload version `3.69.0` or higher
+* Next.js version `15.1.6` or higher
+
+## Install the package
+
+```bash package-install
+pnpm add payload-auth better-auth
+```
+
+## Configuration
+
+Add the `betterAuthPlugin` to your Payload configuration:
+
+```typescript title="payload.config.ts"
+import { buildConfig } from 'payload/config'
+import { betterAuthPlugin } from 'payload-auth'
+
+export default buildConfig({
+  // ... other config
+  plugins: [
+    betterAuthPlugin({
+      betterAuthOptions: {
+        // Better Auth options
+        secret: process.env.BETTER_AUTH_SECRET,
+      },
+      // Plugin options
+      users: {
+        slug: 'users',
+        roles: ['user', 'admin'],
+        defaultRole: 'user',
+        adminRoles: ['admin'],
+      },
+    }),
+  ],
+})
+```
+
+## Environment Variables
+
+Ensure you have the following environment variables set:
+
+```env
+BETTER_AUTH_SECRET=your-secret-key
+BETTER_AUTH_URL=http://localhost:3000 # or your production URL
+```
+
+
+file: ./content/docs/introduction.mdx
+meta: {
+  "title": "Introduction",
+  "description": "The most powerful authentication solution for Payload CMS"
+}
+        
+# Introduction
+
+`payload-auth` is a powerful authentication plugin for Payload CMS, built on top of [Better Auth](https://better-auth.com). It provides a seamless integration of Better Auth's capabilities into your Payload applications.
+
+## Key Features
+
+* **Better Auth Integration**: Leverages the robust features of Better Auth.
+* **Payload CMS Native**: Designed specifically for Payload CMS.
+* **Flexible Configuration**: Highly customizable to fit your authentication needs.
+* **Multiple Providers**: Supports various authentication providers (OAuth, Email/Password, etc.).
+
+## Why use Payload Auth?
+
+If you are looking for a modern, secure, and extensible authentication solution for your Payload CMS project, `payload-auth` offers the best of both worlds: the flexibility of Better Auth and the ease of use of a dedicated Payload plugin.
+
+
+file: ./content/docs/usage.mdx
+meta: {
+  "title": "Usage",
+  "description": "How to use payload-auth in your application"
+}
+        
+# Usage Application
+
+The `payload-auth` plugin seamlessly integrates Better Auth with Payload CMS, managing the database schema, user sessions, and admin access control.
+
+## Architecture
+
+When you add `betterAuthPlugin` to your Payload config, it performs several key actions:
+
+1. **Schema Generation**: It inspects your `betterAuthOptions` and generates the necessary database tables (using the "Better Auth" schema format) but mapped to Payload Collections.
+2. **Collection Injection**: It automatically injects the following collections into your Payload config:
+   * `users` (or your custom slug)
+   * `sessions`
+   * `accounts`
+   * `verifications`
+   * `admin-invitations`
+3. **Endpoint Injection**: It adds standard Better Auth API endpoints to your Payload application (e.g., `/api/auth/*`).
+4. **Admin UI**: It customizes the Payload Admin UI to use Better Auth for sign-in and account management, replacing the default Payload auth views if `disableDefaultPayloadAuth` is enabled.
+
+## Reserved Names
+
+To prevent conflicts, avoid creating collections with the following slugs unless you are explicitly overriding the plugin's internal collections:
+
+* `users`
+* `accounts`
+* `sessions`
+* `verifications`
+* `admin-invitations`
+
+## Accessing Auth in Code
+
+### Server-Side (Payload / Next.js)
+
+You can access the full Better Auth instance directly from the Payload object. This is useful for hooks, custom endpoints, or server components.
+
+```typescript
+import { getPayload } from 'payload'
+import config from '@payload-config'
+
+const payload = await getPayload({ config })
+
+// Access the initialized Better Auth instance
+const auth = payload.betterAuth
+
+// Example: Get usage session
+const session = await auth.api.getSession({
+    headers: req.headers
+})
+```
+
+### Client-Side
+
+For client-side interactions (like signing in from a custom React component), use the Better Auth client.
+
+```typescript
+import { createAuthClient } from "better-auth/client"
+
+const authClient = createAuthClient({
+    baseURL: process.env.NEXT_PUBLIC_URL || "http://localhost:3000"
+})
+
+async function signIn() {
+    await authClient.signIn.social({
+        provider: "github"
+    })
+}
+```
+
+## Best Practices
+
+### 1. Environment Variables
+
+Always ensure `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL` are set in your environment variables. The plugin relies on these for security and redirection.
+
+```env
+BETTER_AUTH_SECRET=your-secure-random-string
+BETTER_AUTH_URL=http://localhost:3000
+```
+
+### 2. Custom User Fields
+
+If you need to add custom fields to your users (e.g., `bio`, `preferences`), you can do so by defining a `users` collection in your Payload config. The plugin will merge its required fields (email, password, etc.) with your custom fields.
+
+**However**, you must ensure your collection slug matches the plugin's `users.slug` option (default: `users`).
+
+### 3. Disabling Default Auth
+
+For the most integrated experience, we recommend setting `disableDefaultPayloadAuth: true`. This lets Better Auth handle everything, including the Admin Panel login, ensuring a single session source of truth.
+
+```typescript
+betterAuthPlugin({
+    betterAuthOptions: { /* ... */ },
+    disableDefaultPayloadAuth: true, // Recommended
+})
+```
+
+## Troubleshooting
+
+### "Collection with slug 'users' already exists"
+
+You likely have a `users` collection defined in your `payload.config.ts` AND the plugin is trying to create one.
+**Solution**: Remove the manual `users` collection OR configure the plugin to use a different slug (e.g., `users: { slug: 'auth-users' }`).
+
+### "Better Auth Secret not found"
+
+Ensure `BETTER_AUTH_SECRET` is defined in your `.env` file and that Payload is loading environment variables correctly.
+
